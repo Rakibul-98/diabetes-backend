@@ -6,7 +6,6 @@ import pandas as pd
 app = Flask(__name__)
 CORS(app, resources={r"/predict": {"origins": "*"}}, supports_credentials=True)
 
-# Load model components
 model = joblib.load("diabetes_model.pkl")
 scaler = joblib.load("scaler.pkl")
 selected_features = joblib.load("selected_features.pkl")
@@ -38,14 +37,12 @@ def predict():
     try:
         data = request.get_json(force=True)
 
-        # Fill missing optional fields with defaults
         for feature in selected_features:
             if feature not in data:
                 default = default_values.get(feature)
                 if default is not None:
                     data[feature] = default
 
-        # Final check: any required fields still missing (that have no default)?
         missing = [f for f in selected_features if f not in data]
         if missing:
             return jsonify({
@@ -53,11 +50,9 @@ def predict():
                 "missing_fields": missing
             }), 400
 
-        # Create DataFrame in correct order
         df = pd.DataFrame([data])
         df = df.reindex(columns=selected_features)
 
-        # Scale and predict
         df_scaled = scaler.transform(df)
         prediction = int(model.predict(df_scaled)[0])
         probability = float(model.predict_proba(df_scaled)[0][1])
@@ -65,7 +60,6 @@ def predict():
         return jsonify({
             "prediction": prediction,
             "probability": round(probability, 4),
-            # "input": data
         })
 
     except Exception as e:
